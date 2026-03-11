@@ -6,4 +6,5 @@ smore_dom_dump.html
 smore_structure.json
 inspect_dom.py
 smore-report-*.pdf
+vision_cache.json
 .claude/

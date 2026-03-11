@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 import httpx
 
 from .models import PageData, SmoreSection, Issue, ImageInfo, LinkInfo, HeadingInfo, EmbedInfo
-from .vision import classify_image, compare_flyer_to_section_text, evaluate_alt_text, suggest_link_text
+from .vision_router import classify_images_batch, compare_flyer_to_section_text, evaluate_alt_text, suggest_link_text, is_too_small
 
 # Generic/meaningless link text patterns (all lowercase for comparison)
 GENERIC_LINK_TEXT = {
@@ -135,13 +135,28 @@ def check_images(section: SmoreSection) -> list[Issue]:
 
     section_text = section.text
 
+    # Pre-filter: skip tiny images (< 100x100) as decorative
+    images_to_check = []
     for img in section.images:
-        # Use Claude vision to classify the image
         try:
-            classification = classify_image(img.src, section_text=section_text)
-        except Exception as e:
-            print(f"  Warning: Could not classify image {img.src}: {e}")
-            classification = {"is_content": True, "is_flyer": False, "has_qr_code": False}
+            if is_too_small(img.src):
+                continue
+        except Exception:
+            pass
+        images_to_check.append(img)
+
+    if not images_to_check:
+        return issues
+
+    # Batch classify all images in this section
+    urls = [img.src for img in images_to_check]
+    try:
+        classifications = classify_images_batch(urls, section_text=section_text)
+    except Exception as e:
+        print(f"  Warning: Batch classification failed: {e}")
+        classifications = [{"is_content": True, "is_flyer": False, "has_qr_code": False}] * len(urls)
+
+    for img, classification in zip(images_to_check, classifications):
 
         if not classification.get("is_content", True):
             continue  # Skip decorative images
@@ -620,7 +635,12 @@ def check_emojis(section: SmoreSection) -> list[Issue]:
 
 
 def run_all_checks(page_data: PageData, verbose: bool = True) -> list[Issue]:
-    """Run all accessibility checks and return a list of issues."""
+    """Run all accessibility checks and return a list of issues.
+
+    Non-vision checks (links, embeds, emojis) run first for each section,
+    then vision checks run after. This way non-vision work happens during
+    the dead time between vision API calls across sections.
+    """
     all_issues = []
 
     # Section-level checks
@@ -628,26 +648,25 @@ def run_all_checks(page_data: PageData, verbose: bool = True) -> list[Issue]:
         if verbose:
             print(f"  Checking section: {section.name}")
 
-        # Image checks (includes flyer checks, alt text eval, duplicate alt)
-        if section.images:
-            if verbose:
-                print(f"    Checking {len(section.images)} image(s)...")
-            all_issues.extend(check_images(section))
-
-        # Link checks
+        # Run non-vision checks first (these are instant, no API calls)
+        # This uses the dead time between vision API calls productively
         if section.links:
             if verbose:
                 print(f"    Checking {len(section.links)} link(s)...")
             all_issues.extend(check_links(section))
 
-        # Embed checks
         if section.embeds:
             if verbose:
                 print(f"    Checking {len(section.embeds)} embed(s)...")
             all_issues.extend(check_embeds(section))
 
-        # Emoji checks
         all_issues.extend(check_emojis(section))
+
+        # Image checks last (includes vision API calls with sleep delays)
+        if section.images:
+            if verbose:
+                print(f"    Checking {len(section.images)} image(s)...")
+            all_issues.extend(check_images(section))
 
     # Page-level heading check
     if verbose:
