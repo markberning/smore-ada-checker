@@ -5,6 +5,6 @@ __pycache__/
 smore_dom_dump.html
 smore_structure.json
 inspect_dom.py
-smore-report-*.pdf
+reports/
 vision_cache.json
 .claude/
