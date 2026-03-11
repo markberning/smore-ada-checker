@@ -11,7 +11,7 @@ from .report import generate_report
 from .models import Issue
 
 
-async def run_checks(url: str, output_dir: str = ".", verbose: bool = True) -> tuple[list[Issue], str, str, str]:
+async def run_checks(url: str, verbose: bool = True) -> tuple[list[Issue], str, str, str]:
     """Scrape a Smore page, run accessibility checks, and capture screenshots.
 
     Does NOT generate the PDF -- the caller decides what to do with the results
@@ -19,7 +19,6 @@ async def run_checks(url: str, output_dir: str = ".", verbose: bool = True) -> t
 
     Args:
         url: The Smore post URL to audit.
-        output_dir: Directory to save the eventual PDF report.
         verbose: Whether to print progress messages.
 
     Returns:
@@ -29,7 +28,11 @@ async def run_checks(url: str, output_dir: str = ".", verbose: bool = True) -> t
     slug = urlparse(url).path.strip("/").split("/")[-1]
     today = date.today().strftime("%Y-%m-%d")
     output_filename = f"smore-report-{slug}-{today}.pdf"
-    output_path = os.path.join(output_dir, output_filename)
+
+    # Save to reports/ folder in project root
+    reports_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    output_path = os.path.join(reports_dir, output_filename)
 
     # Temp dir for screenshots
     screenshot_dir = tempfile.mkdtemp(prefix="smore_screenshots_")
@@ -75,18 +78,17 @@ async def run_checks(url: str, output_dir: str = ".", verbose: bool = True) -> t
         await close_browser(pw, browser)
 
 
-async def run_audit(url: str, output_dir: str = ".", verbose: bool = True) -> str:
+async def run_audit(url: str, verbose: bool = True) -> str:
     """Run a full accessibility audit and generate the PDF directly (no review step).
 
     Args:
         url: The Smore post URL to audit.
-        output_dir: Directory to save the PDF report.
         verbose: Whether to print progress messages.
 
     Returns:
         Path to the generated PDF report.
     """
-    issues, page_url, page_title, output_path = await run_checks(url, output_dir, verbose)
+    issues, page_url, page_title, output_path = await run_checks(url, verbose)
 
     if verbose:
         print("Generating PDF report...")

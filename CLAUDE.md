@@ -13,6 +13,8 @@ If no issues are found, the PDF is generated directly without the review step.
 
 Use `--no-review` to skip the review step and generate the PDF immediately (old behavior).
 
+All PDF reports save to the `reports/` folder in the project root (created automatically, gitignored). Filename format: `smore-report-{slug}-{date}.pdf`.
+
 ## Vision Providers
 
 Configurable via `VISION_PROVIDER` env var in `.env`:
