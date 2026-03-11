@@ -561,9 +561,10 @@ def check_headings(page_data: PageData) -> list[Issue]:
 
 
 EMOJI_SUGGESTION = (
-    "Emojis are read aloud by screen readers using their full name, which can be disruptive. "
-    "Avoid using emojis at the beginning of sentences or paragraphs, avoid multiple emojis in a row, "
-    "and use them sparingly overall. One at the end of a sentence is generally acceptable."
+    "Avoid using emojis at the start of sentences or paragraphs\n"
+    "Avoid multiple emojis in a row\n"
+    "Use emojis sparingly overall\n"
+    "One emoji at the end of a sentence is generally acceptable"
 )
 
 

@@ -122,12 +122,18 @@ def generate_html_report(issues: list[Issue], page_url: str, page_title: str) ->
 
             description_html = _format_description(issue.description)
 
+            # Render multi-line suggestions as a bulleted list
+            suggestion_lines = [line.strip() for line in issue.suggestion.split("\n") if line.strip()]
+            if len(suggestion_lines) > 1:
+                items = "".join(f"<li>{escape(line)}</li>" for line in suggestion_lines)
+                fix_content = f'<strong>How to fix:</strong><ul class="fix-list">{items}</ul>'
+            else:
+                fix_content = f'<strong>How to fix:</strong> {escape(issue.suggestion)}'
+
             info_html = f"""
                 <p class="issue-desc">{description_html}</p>
                 {detail_boxes}
-                <div class="fix-box">
-                    <strong>How to fix:</strong> {escape(issue.suggestion)}
-                </div>
+                <div class="fix-box">{fix_content}</div>
             """
 
             if screenshots_html:
@@ -410,6 +416,14 @@ def generate_html_report(issues: list[Issue], page_url: str, page_title: str) ->
     }}
     .fix-box strong {{
         color: #334155;
+    }}
+    .fix-list {{
+        margin: 4px 0 0 18px;
+        padding: 0;
+        list-style-type: disc;
+    }}
+    .fix-list li {{
+        margin-bottom: 1px;
     }}
 
     /* No issues */

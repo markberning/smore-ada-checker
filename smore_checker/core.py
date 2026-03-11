@@ -8,17 +8,22 @@ from .scraper import launch_browser, close_browser, load_page, scrape_page, capt
 from .checks import run_all_checks
 from .report import generate_report
 
+from .models import Issue
 
-async def run_audit(url: str, output_dir: str = ".", verbose: bool = True) -> str:
-    """Run a full accessibility audit on a Smore page.
+
+async def run_checks(url: str, output_dir: str = ".", verbose: bool = True) -> tuple[list[Issue], str, str, str]:
+    """Scrape a Smore page, run accessibility checks, and capture screenshots.
+
+    Does NOT generate the PDF -- the caller decides what to do with the results
+    (e.g. open the review server or generate the PDF directly).
 
     Args:
         url: The Smore post URL to audit.
-        output_dir: Directory to save the PDF report.
+        output_dir: Directory to save the eventual PDF report.
         verbose: Whether to print progress messages.
 
     Returns:
-        Path to the generated PDF report.
+        Tuple of (issues, page_url, page_title, output_path).
     """
     # Derive slug and output filename
     slug = urlparse(url).path.strip("/").split("/")[-1]
@@ -37,7 +42,6 @@ async def run_audit(url: str, output_dir: str = ".", verbose: bool = True) -> st
     pw, browser = await launch_browser()
 
     try:
-        # 1. Load and scrape the page
         if verbose:
             print("Loading page...")
         page = await load_page(browser, url)
@@ -52,7 +56,6 @@ async def run_audit(url: str, output_dir: str = ".", verbose: bool = True) -> st
                   f"{sum(len(s.links) for s in page_data.sections)} links")
             print()
 
-        # 2. Run all checks
         if verbose:
             print("Running accessibility checks...")
         issues = run_all_checks(page_data, verbose=verbose)
@@ -61,21 +64,35 @@ async def run_audit(url: str, output_dir: str = ".", verbose: bool = True) -> st
             print(f"\nFound {len(issues)} issue(s)")
             print()
 
-        # 3. Capture screenshots for each issue
         if issues:
             if verbose:
                 print("Capturing screenshots...")
             await capture_issue_screenshots(page, issues, screenshot_dir)
 
-        # 4. Generate report
-        if verbose:
-            print("Generating PDF report...")
-        await generate_report(issues, url, page_data.title, output_path)
-
-        if verbose:
-            print(f"\nReport saved to: {output_path}")
-
-        return output_path
+        return issues, url, page_data.title, output_path
 
     finally:
         await close_browser(pw, browser)
+
+
+async def run_audit(url: str, output_dir: str = ".", verbose: bool = True) -> str:
+    """Run a full accessibility audit and generate the PDF directly (no review step).
+
+    Args:
+        url: The Smore post URL to audit.
+        output_dir: Directory to save the PDF report.
+        verbose: Whether to print progress messages.
+
+    Returns:
+        Path to the generated PDF report.
+    """
+    issues, page_url, page_title, output_path = await run_checks(url, output_dir, verbose)
+
+    if verbose:
+        print("Generating PDF report...")
+    await generate_report(issues, page_url, page_title, output_path)
+
+    if verbose:
+        print(f"\nReport saved to: {output_path}")
+
+    return output_path
