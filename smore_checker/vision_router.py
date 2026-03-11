@@ -23,6 +23,7 @@ else:
     from . import vision_claude as _provider
 
 provider_name = _provider.PROVIDER_NAME
+provider_label = _provider_name  # "claude" or "gemini" — used in filenames
 _rate_limit_delay = _provider.RATE_LIMIT_DELAY
 
 # --- Stats for verbose logging ---
