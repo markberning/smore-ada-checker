@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from .scraper import launch_browser, close_browser, load_page, scrape_page, capture_issue_screenshots
 from .checks import run_all_checks
 from .report import generate_report
+from .vision_router import provider_name, provider_label
 
 from .models import Issue
 
@@ -27,7 +28,7 @@ async def run_checks(url: str, verbose: bool = True) -> tuple[list[Issue], str, 
     # Derive slug and output filename
     slug = urlparse(url).path.strip("/").split("/")[-1]
     today = date.today().strftime("%Y-%m-%d")
-    output_filename = f"smore-report-{slug}-{today}.pdf"
+    output_filename = f"smore-report-{slug}-{today}-{provider_label}.pdf"
 
     # Save to reports/ folder in project root
     reports_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reports")

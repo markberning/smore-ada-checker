@@ -16,6 +16,7 @@ from flask import Flask, request, send_file
 
 from .models import Issue
 from .report import generate_html_report, save_pdf_report
+from .vision_router import provider_name as vision_provider_name
 
 app = Flask(__name__)
 
@@ -779,7 +780,8 @@ def _generate_review_html(issues: list[Issue], page_url: str, page_title: str) -
         <h1>Review Accessibility Issues</h1>
         <p class="header-meta">
             <strong>Page:</strong> {escape(page_title)}<br>
-            <strong>URL:</strong> <a href="{escape(page_url)}">{escape(page_url)}</a>
+            <strong>URL:</strong> <a href="{escape(page_url)}">{escape(page_url)}</a><br>
+            <strong>Vision provider:</strong> {escape(vision_provider_name)}
         </p>
     </div>
 </header>
